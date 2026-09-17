@@ -93,7 +93,31 @@ object-counter-sorter/
     └── diagrams/                  # Architecture / UML diagrams used in the report
 ```
 
-## Steps to Install & Run
+## Environment Setup
+
+This project requires **Python 3.10 or newer** and no other software (no database,
+no GUI toolkit, no external services). Everything runs from the command line.
+
+### 0. Install Python (skip if already installed)
+
+Check first:
+```bash
+python --version
+```
+If this errors or shows a version below 3.10:
+
+- **Windows**: download the installer from [python.org/downloads](https://www.python.org/downloads/).
+  On the very first install screen, **check the box "Add python.exe to PATH"** before
+  clicking Install. If `python` still isn't recognized afterwards, search Windows for
+  **"Manage App Execution Aliases"** and turn OFF the "App Installer python.exe/python3.exe"
+  entries (these are fake Microsoft Store stubs that shadow a real install), then reopen
+  your terminal.
+- **macOS**: `brew install python3` (requires [Homebrew](https://brew.sh)), or download
+  from python.org.
+- **Linux**: `sudo apt install python3 python3-venv python3-pip` (Debian/Ubuntu) or the
+  equivalent for your distribution.
+
+Also ensure Git is installed (to clone the repo): [git-scm.com/downloads](https://git-scm.com/downloads).
 
 ### 1. Clone the repository
 ```bash
@@ -101,23 +125,61 @@ git clone https://github.com/<your-username>/object-counter-sorter.git
 cd object-counter-sorter
 ```
 
-### 2. Create a virtual environment (recommended)
+### 2. Create and activate a virtual environment (recommended, not mandatory)
 ```bash
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+python -m venv venv
 ```
+Activate it:
+```bash
+venv\Scripts\activate           # Windows (PowerShell or cmd)
+source venv/bin/activate        # macOS / Linux
+```
+A successful activation shows `(venv)` at the start of your terminal prompt.
+
+> **Windows PowerShell "running scripts is disabled" error?** Run this once, then retry
+> activation:
+> ```powershell
+> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+> ```
+> Type `Y` to confirm when prompted.
 
 ### 3. Install dependencies
+
+Always install using `python -m pip` (not a bare `pip` command) — this guarantees the
+packages install into the **same** Python environment that will run the project, which
+avoids a common mismatch between a global `pip` and a virtual-environment `python`:
+
 ```bash
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-### 4. Generate the sample images (first run only)
+Verify OpenCV installed correctly:
+```bash
+python -c "import cv2; print(cv2.__version__)"
+```
+This should print a version number (e.g., `4.10.0`) with no error. If you see
+`ModuleNotFoundError: No module named 'cv2'` even after installing, it almost always
+means `pip` and `python` are pointing at two different Python installations — re-run
+the install with `python -m pip install -r requirements.txt` exactly as shown above
+rather than a bare `pip install`.
+
+### 4. Configuration (optional)
+
+No configuration file needs to be created to run the project — sensible defaults are
+built in (see `modules/config.py`). Advanced users can tune detection thresholds either
+by editing `modules/config.py` directly, or per-run via CLI flags (Step 6 below).
+
+### 5. Generate the sample images (first run only)
 ```bash
 python generate_sample_images.py
 ```
+Expected output:
+```
+Sample images written to 'sample_images/'.
+```
 
-### 5. Run the pipeline
+### 6. Run the pipeline
 ```bash
 # Mixed geometric shapes
 python main.py --image sample_images/shapes_sample.png --output output/shapes_run
@@ -126,12 +188,17 @@ python main.py --image sample_images/shapes_sample.png --output output/shapes_ru
 python main.py --image sample_images/coins_sample.png --output output/coins_run --min-area 300
 ```
 
-### 6. Use your own image
+Each run prints a detection summary to the console and writes an annotated image, an
+edge map, a CSV report, and a log file into the `--output` folder (see "Output" section
+below).
+
+### 7. Use your own image
 ```bash
 python main.py --image path/to/your_image.png --output output/my_run
 ```
 
-Optional overrides:
+Optional threshold overrides (useful for real photographs, which usually need
+different tuning than the synthetic samples):
 ```bash
 python main.py --image sample_images/coins_sample.png \
                 --output output/tuned_run \
@@ -170,8 +237,25 @@ Run the full automated test suite (25 unit tests across every module):
 python -m unittest discover -s tests -v
 ```
 
+Expected final lines:
+```
+Ran 25 tests in 0.0XXs
+
+OK
+```
+
 All tests are deterministic (they use synthetic in-memory images), so no
 external files or network access are required.
+
+## Troubleshooting
+
+| Symptom | Likely cause / fix |
+|---|---|
+| `python: command not found` | Python isn't installed or not on PATH — see Environment Setup, Step 0 |
+| `ModuleNotFoundError: No module named 'cv2'` after installing | `pip` and `python` point to different environments — reinstall with `python -m pip install -r requirements.txt` |
+| PowerShell: `running scripts is disabled on this system` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, confirm with `Y`, then retry `venv\Scripts\activate` |
+| `ERROR: Input file not found` when running `main.py` | Check the `--image` path is correct and relative to your current terminal directory |
+| Annotated image shows 0 objects detected | Your image likely needs different thresholds — try `--min-area`, `--canny-low`, `--canny-high` overrides (Step 7) |
 
 ## Screenshots
 
